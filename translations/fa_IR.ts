@@ -219,7 +219,7 @@
     </message>
     <message>
         <source>Username</source>
-        <translation type="unfinished">نام کاربری</translation>
+        <translation>نام کاربری</translation>
     </message>
     <message>
         <source>Password</source>
@@ -750,7 +750,7 @@
     </message>
     <message>
         <source>Generate UUID</source>
-        <translation type="unfinished"></translation>
+        <translation>تولید UUID</translation>
     </message>
 </context>
 <context>
@@ -1342,7 +1342,7 @@ How to update?</source>
     </message>
     <message>
         <source>Clearing servers...</source>
-        <translation type="unfinished"></translation>
+        <translation type="unfinished">پاک سازی سرورها...</translation>
     </message>
     <message>
         <source>Added %1 profiles:
@@ -1398,7 +1398,7 @@ Direct: %2</source>
     </message>
     <message>
         <source>Request with proxy but no profile started.</source>
-        <translation type="unfinished"></translation>
+        <translation type="unfinished">درخواست با پروکسی اما بدون نمایه شروع شد.</translation>
     </message>
     <message>
         <source>Enable VPN</source>
