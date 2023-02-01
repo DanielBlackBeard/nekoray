@@ -8,7 +8,7 @@
 #include "sys/AutoRun.hpp"
 
 #include "ui/ThemeManager.hpp"
-#include "ui/TrayIcon.hpp"
+#include "ui/Icon.hpp"
 #include "ui/edit/dialog_edit_profile.h"
 #include "ui/dialog_basic_settings.h"
 #include "ui/dialog_manage_groups.h"
@@ -175,11 +175,17 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
         }
         refresh_proxy_list_impl(-1, action);
     });
-    ui->proxyListTable->horizontalHeader()->setSectionResizeMode(0, QHeaderView::ResizeToContents);
-    ui->proxyListTable->horizontalHeader()->setSectionResizeMode(1, QHeaderView::Stretch);
-    ui->proxyListTable->horizontalHeader()->setSectionResizeMode(2, QHeaderView::Stretch);
-    ui->proxyListTable->horizontalHeader()->setSectionResizeMode(3, QHeaderView::ResizeToContents);
-    ui->proxyListTable->horizontalHeader()->setSectionResizeMode(4, QHeaderView::ResizeToContents);
+    connect(ui->proxyListTable->horizontalHeader(), &QHeaderView::sectionResized, this, [=](int logicalIndex, int oldSize, int newSize) {
+        auto group = NekoRay::profileManager->CurrentGroup();
+        if (NekoRay::dataStore->refreshing_group || group == nullptr || !group->manually_column_width) return;
+        // save manually column width
+        group->column_width.clear();
+        for (int i = 0; i < ui->proxyListTable->horizontalHeader()->count(); i++) {
+            group->column_width.push_back(ui->proxyListTable->horizontalHeader()->sectionSize(i));
+        }
+        group->column_width[logicalIndex] = newSize;
+        group->Save();
+    });
     ui->tableWidget_conn->horizontalHeader()->setSectionResizeMode(0, QHeaderView::ResizeToContents);
     ui->tableWidget_conn->horizontalHeader()->setSectionResizeMode(1, QHeaderView::ResizeToContents);
     ui->tableWidget_conn->horizontalHeader()->setSectionResizeMode(2, QHeaderView::Stretch);
@@ -223,7 +229,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
 
     // Setup Tray
     tray = new QSystemTrayIcon(this); // 初始化托盘对象tray
-    tray->setIcon(TrayIcon::GetIcon(TrayIcon::NONE));
+    tray->setIcon(Icon::GetTrayIcon(Icon::NONE));
     tray->setContextMenu(ui->menu_program); // 创建托盘菜单
     tray->show();                           // 让托盘图标显示在系统托盘上
     connect(tray, &QSystemTrayIcon::activated, this, [=](QSystemTrayIcon::ActivationReason reason) {
@@ -290,10 +296,10 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
         auto fn = a->text();
         if (!fn.isEmpty()) {
             NekoRay::Routing r;
-            r.load_control_force = true;
+            r.load_control_must = true;
             r.fn = ROUTES_PREFIX + fn;
             if (r.Load()) {
-                if (QMessageBox::question(GetMessageBoxParent(), software_name, tr("Load routing and apply: %1").arg(fn) + "\n" + r.toString()) == QMessageBox::Yes) {
+                if (QMessageBox::question(GetMessageBoxParent(), software_name, tr("Load routing and apply: %1").arg(fn) + "\n" + r.DisplayRouting()) == QMessageBox::Yes) {
                     NekoRay::Routing::SetToActive(fn);
                     if (NekoRay::dataStore->started_id >= 0) {
                         neko_start(NekoRay::dataStore->started_id);
@@ -335,6 +341,36 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
     connect(ui->menu_url_test, &QAction::triggered, this, [=]() { speedtest_current_group(1); });
     connect(ui->menu_full_test, &QAction::triggered, this, [=]() { speedtest_current_group(2); });
     //
+    auto set_selected_or_group = [=](int mode) {
+        // 0=group 1=select 2=unknown(menu is hide)
+        ui->menu_server->setProperty("selected_or_group", mode);
+    };
+    auto move_tests_to_menu = [=](bool menuCurrent_Select) {
+        return [=] {
+            if (menuCurrent_Select) {
+                ui->menuCurrent_Select->insertAction(ui->actionfake_4, ui->menu_tcp_ping);
+                ui->menuCurrent_Select->insertAction(ui->actionfake_4, ui->menu_url_test);
+                ui->menuCurrent_Select->insertAction(ui->actionfake_4, ui->menu_full_test);
+                ui->menuCurrent_Select->insertAction(ui->actionfake_4, ui->menu_clear_test_result);
+                ui->menuCurrent_Select->insertAction(ui->actionfake_4, ui->menu_resolve_domain);
+            } else {
+                ui->menuCurrent_Group->insertAction(ui->actionfake_5, ui->menu_tcp_ping);
+                ui->menuCurrent_Group->insertAction(ui->actionfake_5, ui->menu_url_test);
+                ui->menuCurrent_Group->insertAction(ui->actionfake_5, ui->menu_full_test);
+                ui->menuCurrent_Group->insertAction(ui->actionfake_5, ui->menu_clear_test_result);
+                ui->menuCurrent_Group->insertAction(ui->actionfake_5, ui->menu_resolve_domain);
+            }
+            ui->menu_full_test->setVisible(!IS_NEKO_BOX);
+            set_selected_or_group(menuCurrent_Select ? 1 : 0);
+        };
+    };
+    connect(ui->menuCurrent_Select, &QMenu::aboutToShow, this, move_tests_to_menu(true));
+    connect(ui->menuCurrent_Group, &QMenu::aboutToShow, this, move_tests_to_menu(false));
+    connect(ui->menu_server, &QMenu::aboutToHide, this, [=] {
+        setTimeout([=] { set_selected_or_group(2); }, this, 200);
+    });
+    set_selected_or_group(2);
+    //
     connect(ui->menu_share_item, &QMenu::aboutToShow, this, [=] {
         QString name;
         auto selected = get_now_selected();
@@ -344,9 +380,6 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
         }
         ui->menu_export_config->setVisible(name == software_core_name);
         ui->menu_export_config->setText(tr("Export %1 config").arg(name));
-    });
-    connect(ui->menugroup, &QMenu::aboutToShow, this, [=] {
-        ui->menu_full_test->setVisible(!IS_NEKO_BOX);
     });
     refresh_status();
 
@@ -417,9 +450,13 @@ void MainWindow::on_tabWidget_currentChanged(int index) {
 }
 
 void MainWindow::show_group(int gid) {
+    if (NekoRay::dataStore->refreshing_group) return;
+    NekoRay::dataStore->refreshing_group = true;
+
     auto group = NekoRay::profileManager->GetGroup(gid);
     if (group == nullptr) {
         MessageBoxWarning(tr("Error"), QString("No such group: %1").arg(gid));
+        NekoRay::dataStore->refreshing_group = false;
         return;
     }
 
@@ -429,9 +466,28 @@ void MainWindow::show_group(int gid) {
     }
     ui->tabWidget->widget(groupId2TabIndex(gid))->layout()->addWidget(ui->proxyListTable);
 
+    // 列宽是否可调
+    if (group->manually_column_width) {
+        for (int i = 0; i <= 4; i++) {
+            ui->proxyListTable->horizontalHeader()->setSectionResizeMode(i, QHeaderView::Interactive);
+            auto size = group->column_width.value(i);
+            if (size <= 0) size = ui->proxyListTable->horizontalHeader()->defaultSectionSize();
+            ui->proxyListTable->horizontalHeader()->resizeSection(i, size);
+        }
+    } else {
+        ui->proxyListTable->horizontalHeader()->setSectionResizeMode(0, QHeaderView::ResizeToContents);
+        ui->proxyListTable->horizontalHeader()->setSectionResizeMode(1, QHeaderView::Stretch);
+        ui->proxyListTable->horizontalHeader()->setSectionResizeMode(2, QHeaderView::Stretch);
+        ui->proxyListTable->horizontalHeader()->setSectionResizeMode(3, QHeaderView::ResizeToContents);
+        ui->proxyListTable->horizontalHeader()->setSectionResizeMode(4, QHeaderView::ResizeToContents);
+    }
+
+    // show proxies
     NekoRay::GroupSortAction gsa;
     gsa.scroll_to_started = true;
     refresh_proxy_list_impl(-1, gsa);
+
+    NekoRay::dataStore->refreshing_group = false;
 }
 
 // callback
@@ -587,8 +643,7 @@ void MainWindow::neko_set_spmode(int mode, bool save) {
 
         if (mode == NekoRay::SystemProxyMode::SYSTEM_PROXY) {
 #if defined(Q_OS_WIN) || defined(Q_OS_MACOS)
-            if (mode == NekoRay::SystemProxyMode::SYSTEM_PROXY && !IS_NEKO_BOX &&
-                !InRange(NekoRay::dataStore->inbound_http_port, 0, 65535)) {
+            if (mode == NekoRay::SystemProxyMode::SYSTEM_PROXY && !IS_NEKO_BOX && !IsValidPort(NekoRay::dataStore->inbound_http_port)) {
                 auto btn = QMessageBox::warning(this, software_name,
                                                 tr("Http inbound is not enabled, can't set system proxy."),
                                                 "OK", tr("Settings"), "", 0, 0);
@@ -646,7 +701,7 @@ void MainWindow::refresh_status(const QString &traffic_update) {
     }
     //
     auto display_http = tr("None");
-    if (InRange(NekoRay::dataStore->inbound_http_port, 0, 65535)) {
+    if (IsValidPort(NekoRay::dataStore->inbound_http_port)) {
         display_http = DisplayAddress(NekoRay::dataStore->inbound_address, NekoRay::dataStore->inbound_http_port);
     }
     auto display_socks = DisplayAddress(NekoRay::dataStore->inbound_address, NekoRay::dataStore->inbound_socks_port);
@@ -676,21 +731,23 @@ void MainWindow::refresh_status(const QString &traffic_update) {
         return tt.join(isTray ? "\n" : " ");
     };
 
-    auto icon_status_new = TrayIcon::NONE;
+    auto icon_status_new = Icon::NONE;
     if (NekoRay::dataStore->running_spmode == NekoRay::SystemProxyMode::SYSTEM_PROXY) {
-        icon_status_new = TrayIcon::SYSTEM_PROXY;
+        icon_status_new = Icon::SYSTEM_PROXY;
     } else if (NekoRay::dataStore->running_spmode == NekoRay::SystemProxyMode::VPN) {
-        icon_status_new = TrayIcon::VPN;
+        icon_status_new = Icon::VPN;
     } else if (!running.isNull()) {
-        icon_status_new = TrayIcon::RUNNING;
+        icon_status_new = Icon::RUNNING;
     }
 
+    // refresh title & window icon
     setWindowTitle(make_title(false));
-    if (icon_status_new != icon_status) QApplication::setWindowIcon(TrayIcon::GetIcon(TrayIcon::NONE));
+    if (icon_status_new != icon_status) QApplication::setWindowIcon(Icon::GetTrayIcon(Icon::NONE));
 
+    // refresh tray
     if (tray != nullptr) {
         tray->setToolTip(make_title(true));
-        if (icon_status_new != icon_status) tray->setIcon(TrayIcon::GetIcon(icon_status_new));
+        if (icon_status_new != icon_status) tray->setIcon(Icon::GetTrayIcon(icon_status_new));
     }
 
     icon_status = icon_status_new;
@@ -965,7 +1022,8 @@ void MainWindow::on_menu_profile_debug_info_triggered() {
     if (btn == 1) {
         QDesktopServices::openUrl(QUrl::fromLocalFile(QFileInfo(QString("profiles/%1.json").arg(ents.first()->id)).absoluteFilePath()));
     } else if (btn == 2) {
-        ents.first()->Load();
+        NekoRay::dataStore->Load();
+        NekoRay::profileManager->Load();
         refresh_proxy_list();
     }
 }
@@ -1135,8 +1193,7 @@ void MainWindow::on_menu_scan_qr_triggered() {
 }
 
 void MainWindow::on_menu_clear_test_result_triggered() {
-    for (const auto &profile: NekoRay::profileManager->profiles) {
-        if (NekoRay::dataStore->current_group != profile->gid) continue;
+    for (const auto &profile: get_selected_or_group()) {
         profile->latency = 0;
         profile->full_test_report = "";
         profile->Save();
@@ -1196,10 +1253,16 @@ void MainWindow::on_menu_remove_unavailable_triggered() {
         if (profile->latency < 0) out_del += profile;
     }
 
+    int remove_display_count = 0;
     QString remove_display;
     for (const auto &ent: out_del) {
         remove_display += ent->bean->DisplayTypeAndName() + "\n";
+        if (++remove_display_count == 20) {
+            remove_display += "...";
+            break;
+        }
     }
+
     if (out_del.length() > 0 &&
         QMessageBox::question(this, tr("Confirmation"), tr("Remove %1 item(s) ?").arg(out_del.length()) + "\n" + remove_display) == QMessageBox::StandardButton::Yes) {
         for (const auto &ent: out_del) {
@@ -1210,19 +1273,16 @@ void MainWindow::on_menu_remove_unavailable_triggered() {
 }
 
 void MainWindow::on_menu_resolve_domain_triggered() {
+    auto profiles = get_selected_or_group();
+    if (profiles.isEmpty()) return;
+
     if (QMessageBox::question(this,
                               tr("Confirmation"),
-                              tr("Resolving current group domain to IP, if support.")) != QMessageBox::StandardButton::Yes) {
+                              tr("Resolving domain to IP, if support.")) != QMessageBox::StandardButton::Yes) {
         return;
     }
     if (mw_sub_updating) return;
     mw_sub_updating = true;
-
-    auto group = NekoRay::profileManager->CurrentGroup();
-    if (group == nullptr) return;
-
-    auto profiles = group->ProfilesWithOrder();
-    NekoRay::dataStore->resolve_count = profiles.length();
 
     for (const auto &profile: profiles) {
         profile->bean->ResolveDomainToIP([=] {
@@ -1247,6 +1307,29 @@ QMap<int, QSharedPointer<NekoRay::ProxyEntity>> MainWindow::get_now_selected() {
         if (ent != nullptr) map[id] = ent;
     }
     return map;
+}
+
+QList<QSharedPointer<NekoRay::ProxyEntity>> MainWindow::get_now_selected_list() {
+    auto items = ui->proxyListTable->selectedItems();
+    QList<QSharedPointer<NekoRay::ProxyEntity>> list;
+    for (auto item: items) {
+        auto id = item->data(114514).toInt();
+        auto ent = NekoRay::profileManager->GetProfile(id);
+        if (ent != nullptr && !list.contains(ent)) list += ent;
+    }
+    return list;
+}
+
+QList<QSharedPointer<NekoRay::ProxyEntity>> MainWindow::get_selected_or_group() {
+    auto selected_or_group = ui->menu_server->property("selected_or_group").toInt();
+    QList<QSharedPointer<NekoRay::ProxyEntity>> profiles;
+    if (selected_or_group > 0) {
+        profiles = get_now_selected_list();
+        if (profiles.isEmpty() && selected_or_group == 2) profiles = NekoRay::profileManager->CurrentGroup()->ProfilesWithOrder();
+    } else {
+        profiles = NekoRay::profileManager->CurrentGroup()->ProfilesWithOrder();
+    }
+    return profiles;
 }
 
 void MainWindow::keyPressEvent(QKeyEvent *event) {
@@ -1294,11 +1377,10 @@ void MainWindow::show_log_impl(const QString &log) {
     FastAppendTextDocument(newLines.join("\n"), qvLogDocument);
     // qvLogDocument->setPlainText(qvLogDocument->toPlainText() + log);
     // From https://gist.github.com/jemyzhang/7130092
-    auto maxLines = 200;
     auto block = qvLogDocument->begin();
 
     while (block.isValid()) {
-        if (qvLogDocument->blockCount() > maxLines) {
+        if (qvLogDocument->blockCount() > NekoRay::dataStore->max_log_line) {
             QTextCursor cursor(block);
             block = block.next();
             cursor.select(QTextCursor::BlockUnderCursor);
@@ -1310,7 +1392,9 @@ void MainWindow::show_log_impl(const QString &log) {
     }
 }
 
-#define ADD_TO_CURRENT_ROUTE(a, b) NekoRay::dataStore->routing->a = (SplitLines(NekoRay::dataStore->routing->a) << b).join("\n");
+#define ADD_TO_CURRENT_ROUTE(a, b)                                                                   \
+    NekoRay::dataStore->routing->a = (SplitLines(NekoRay::dataStore->routing->a) << (b)).join("\n"); \
+    NekoRay::dataStore->routing->Save();
 
 void MainWindow::on_masterLogBrowser_customContextMenuRequested(const QPoint &pos) {
     QMenu *menu = ui->masterLogBrowser->createStandardContextMenu();
@@ -1437,27 +1521,36 @@ void MainWindow::refresh_connection_list(const QJsonArray &arr) {
         row++;
         ui->tableWidget_conn->insertRow(row);
 
+        auto f0 = std::make_unique<QTableWidgetItem>();
+        f0->setData(114514, item["ID"].toInt());
+
         // C0: Status
-        auto *f = new QTableWidgetItem("");
-        f->setData(114514, item["ID"].toInt());
+        auto c0 = new QLabel;
         auto start_t = item["Start"].toInt();
         auto end_t = item["End"].toInt();
-        if (end_t > 0) {
-            f->setText(tr("End"));
+        // icon
+        auto outboundTag = item["Tag"].toString();
+        if (outboundTag == "block") {
+            c0->setPixmap(Icon::GetMaterialIcon("cancel"));
         } else {
-            f->setText(tr("Active"));
+            if (end_t > 0) {
+                c0->setPixmap(Icon::GetMaterialIcon("history"));
+            } else {
+                c0->setPixmap(Icon::GetMaterialIcon("swap-vertical"));
+            }
         }
-        f->setToolTip(tr("Start: %1\nEnd: %2").arg(DisplayTime(start_t), end_t > 0 ? DisplayTime(end_t) : ""));
-        ui->tableWidget_conn->setItem(row, 0, f);
+        c0->setAlignment(Qt::AlignCenter);
+        c0->setToolTip(tr("Start: %1\nEnd: %2").arg(DisplayTime(start_t), end_t > 0 ? DisplayTime(end_t) : ""));
+        ui->tableWidget_conn->setCellWidget(row, 0, c0);
 
         // C1: Outbound
-        f = f->clone();
+        auto f = f0->clone();
         f->setToolTip("");
-        f->setText(item["Tag"].toString());
+        f->setText(outboundTag);
         ui->tableWidget_conn->setItem(row, 1, f);
 
         // C2: Destination
-        f = f->clone();
+        f = f0->clone();
         QString target1 = item["Dest"].toString();
         QString target2 = item["RDest"].toString();
         if (target2.isEmpty() || target1 == target2) {

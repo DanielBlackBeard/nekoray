@@ -32,12 +32,13 @@ int main(int argc, char *argv[]) {
     Windows_SetCrashHandler();
 #endif
 
-    QApplication a(argc, argv);
+    // pre-init QApplication
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     QApplication::setAttribute(Qt::AA_DisableWindowContextHelpButton);
 #endif
     QApplication::setAttribute(Qt::AA_DontUseNativeDialogs);
     QApplication::setQuitOnLastWindowClosed(false);
+    auto preQApp = new QApplication(argc, argv);
 
     // Clean
     QDir::setCurrent(QApplication::applicationDirPath());
@@ -73,6 +74,16 @@ int main(int argc, char *argv[]) {
     if (!wd.exists("config")) wd.mkdir("config");
     QDir::setCurrent(wd.absoluteFilePath("config"));
     QDir("temp").removeRecursively();
+
+    // HiDPI workaround
+    if (ReadFileText("./groups/HiDPI").toInt() == 1) {
+        QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
+        QCoreApplication::setAttribute(Qt::AA_UseHighDpiPixmaps);
+    }
+
+    // init QApplication
+    delete preQApp;
+    QApplication a(argc, argv);
 
     // RunGuard
     RunGuard guard("nekoray" + wd.absolutePath());
@@ -165,11 +176,14 @@ int main(int argc, char *argv[]) {
             locale = "zh_CN";
             break;
         case 3:
-            locale = "fa_IR"; //farsi(iran)
+            locale = "fa_IR"; // farsi(iran)
             break;
         default:
             locale = QLocale().name();
     }
+    QGuiApplication::tr("QT_LAYOUT_DIRECTION");
+    QLocale::setDefault(QLocale(locale));
+    //
     QTranslator trans;
     if (trans.load(":/translations/" + locale + ".qm")) {
         QCoreApplication::installTranslator(&trans);

@@ -8,6 +8,10 @@ Support Windows / Linux / macOS amd64 out of the box now.
 
 目前支持 Windows / Linux / macOS amd64 开箱即用
 
+## Readme Translations
+
+中文 / English (undone) / [fa_IR](README_fa.md)
+
 ## 下载 / Download
 
 ### GitHub Releases (Portable ZIP)
@@ -61,6 +65,12 @@ https://matsuridayo.github.io
 ## Linux 运行
 
 [Linux 运行教程](docs/Run_Linux.md)
+
+## macOS
+
+由于缺乏维护，不再提供 macOS 版本下载。最后包含 dmg 的版本是 2.12。
+
+仍可以参照下方教程自行编译，常见问题请参考历史 Issue，欢迎 Pull Request 修复。
 
 ## 编译教程 / Compile Tutorial
 

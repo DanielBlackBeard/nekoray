@@ -101,7 +101,7 @@
     </message>
     <message>
         <source>Language</source>
-        <translation>语言</translation>
+        <translation type="vanished">语言</translation>
     </message>
     <message>
         <source>Security</source>
@@ -110,10 +110,6 @@
     <message>
         <source>Insecure hint</source>
         <translation>提示不安全的配置</translation>
-    </message>
-    <message>
-        <source>Skip TLS certificate authentication by default</source>
-        <translation>默认跳过 TLS 证书验证</translation>
     </message>
     <message>
         <source>Traffic statistics refresh rate</source>
@@ -153,7 +149,7 @@
     </message>
     <message>
         <source>Include Pre-release when checking update</source>
-        <translation>检查更新时包括 Pre-release</translation>
+        <translation>检查更新时包括 Pre-release 版本</translation>
     </message>
     <message>
         <source>Set custom icon</source>
@@ -211,6 +207,30 @@
         <source>Hide dashboard at startup</source>
         <translation>启动时不显示仪表盘</translation>
     </message>
+    <message>
+        <source>Max log lines</source>
+        <translation>日志最大行数限制</translation>
+    </message>
+    <message>
+        <source>Inbound Auth</source>
+        <translation>入站认证设置</translation>
+    </message>
+    <message>
+        <source>Username</source>
+        <translation>用户名</translation>
+    </message>
+    <message>
+        <source>Password</source>
+        <translation>密码</translation>
+    </message>
+    <message>
+        <source>Maybe useful for HiDPI screens.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Skip TLS certificate authentication by default (allowInsecure)</source>
+        <translation>默认跳过 TLS 证书验证 (allowInsecure)</translation>
+    </message>
 </context>
 <context>
     <name>DialogEditGroup</name>
@@ -261,6 +281,10 @@
     <message>
         <source>Copy profile share links (Neko Links)</source>
         <translation>复制分组内配置的分享链接 (Neko Links)</translation>
+    </message>
+    <message>
+        <source>Manually column width</source>
+        <translation>手动调节列宽</translation>
     </message>
 </context>
 <context>
@@ -448,11 +472,11 @@
     </message>
     <message>
         <source>Enhanced domain name resolution</source>
-        <translation>增强域名解析</translation>
+        <translation type="vanished">增强域名解析</translation>
     </message>
     <message>
         <source>Using multiple overseas DNS to query the server address can alleviate the DNS pollution of the server domain name to a certain extent, which may have side effects.</source>
-        <translation>使用多个境外 DNS 查询服务器地址，一定程度上可缓解对服务器域名的 DNS 污染，可能有副作用。</translation>
+        <translation type="vanished">使用多个境外 DNS 查询服务器地址，一定程度上可缓解对服务器域名的 DNS 污染，可能有副作用。</translation>
     </message>
     <message>
         <source>Enable DNS Routing</source>
@@ -538,6 +562,10 @@
         <source>Custom (global)</source>
         <translation>自定义 (全局)</translation>
     </message>
+    <message>
+        <source>Default Outbound</source>
+        <translation>默认出站</translation>
+    </message>
 </context>
 <context>
     <name>DialogVPNSettings</name>
@@ -565,13 +593,25 @@
         <source>Bypass Process Name</source>
         <translation>绕过进程名</translation>
     </message>
+    <message>
+        <source>Whitelist mode</source>
+        <translation>白名单模式</translation>
+    </message>
+    <message>
+        <source>Proxy CIDR</source>
+        <translation>代理 CIDR</translation>
+    </message>
+    <message>
+        <source>Proxy Process Name</source>
+        <translation>代理进程名</translation>
+    </message>
+    <message>
+        <source>Whether blacklisted or whitelisted, your traffic will be handled by nekobox_core (sing-tun). This is NOT equal to &quot;process mode&quot; of some software.</source>
+        <translation>无论是黑名单还是白名单，您的流量都将由 nekobox_core (sing-tun) 处理。这不等于某些软件的「进程模式」。</translation>
+    </message>
 </context>
 <context>
     <name>EditChain</name>
-    <message>
-        <source>EditChain</source>
-        <translation></translation>
-    </message>
     <message>
         <source>Select Profile</source>
         <translation>选择配置</translation>
@@ -584,20 +624,12 @@
 <context>
     <name>EditCustom</name>
     <message>
-        <source>EditCustom</source>
-        <translation></translation>
-    </message>
-    <message>
         <source>Core</source>
         <translation>核心</translation>
     </message>
     <message>
         <source>Command</source>
         <translation>命令</translation>
-    </message>
-    <message>
-        <source>Generator</source>
-        <translation>生成器</translation>
     </message>
     <message>
         <source>Json Editor</source>
@@ -619,13 +651,25 @@
         <source>Config Suffix</source>
         <translation>配置文件后缀</translation>
     </message>
+    <message>
+        <source>Random if it&apos;s empty or zero.</source>
+        <translation>如果为空或为零，则表示使用随机端口。</translation>
+    </message>
+    <message>
+        <source>Preview</source>
+        <translation>预览</translation>
+    </message>
+    <message>
+        <source>Preview replace</source>
+        <translation>预览替换串</translation>
+    </message>
+    <message>
+        <source>Preview config</source>
+        <translation>预览配置</translation>
+    </message>
 </context>
 <context>
     <name>EditNaive</name>
-    <message>
-        <source>EditNaive</source>
-        <translation></translation>
-    </message>
     <message>
         <source>Protocol</source>
         <translation>协议</translation>
@@ -673,10 +717,6 @@
         <source>Plugin</source>
         <translation>插件</translation>
     </message>
-    <message>
-        <source>Form</source>
-        <translation></translation>
-    </message>
 </context>
 <context>
     <name>EditSocksHttp</name>
@@ -691,10 +731,6 @@
     <message>
         <source>Password</source>
         <translation>密码</translation>
-    </message>
-    <message>
-        <source>Form</source>
-        <translation></translation>
     </message>
 </context>
 <context>
@@ -711,16 +747,16 @@
         <translation>加密</translation>
     </message>
     <message>
-        <source>EditVMess</source>
-        <translation></translation>
-    </message>
-    <message>
         <source>Alter Id</source>
         <translation></translation>
     </message>
     <message>
         <source>UUID</source>
         <translation></translation>
+    </message>
+    <message>
+        <source>Generate UUID</source>
+        <translation>生成 UUID</translation>
     </message>
 </context>
 <context>
@@ -1005,11 +1041,11 @@
     </message>
     <message>
         <source>End</source>
-        <translation>结束</translation>
+        <translation type="vanished">结束</translation>
     </message>
     <message>
         <source>Active</source>
-        <translation>活动</translation>
+        <translation type="vanished">活动</translation>
     </message>
     <message>
         <source>Start: %1
@@ -1174,8 +1210,8 @@ End: %2</source>
         <translation>将服务器域名解析为 IP</translation>
     </message>
     <message>
-        <source>Resolving current group domain to IP, if support.</source>
-        <translation>将当前分组内服务器域名解析为 IP（如果支持）。</translation>
+        <source>Resolving domain to IP, if support.</source>
+        <translation>将服务器域名解析为 IP（如果支持）。</translation>
     </message>
     <message>
         <source>Export %1 config</source>
@@ -1227,12 +1263,16 @@ Split by line.</source>
         <source>Edit</source>
         <translation>编辑</translation>
     </message>
+    <message>
+        <source>Current Select</source>
+        <translation>当前选中</translation>
+    </message>
 </context>
 <context>
     <name>ProxyItem</name>
     <message>
         <source>Remove</source>
-        <translation>删除</translation>
+        <translation type="vanished">删除</translation>
     </message>
     <message>
         <source>Confirmation</source>
@@ -1241,6 +1281,13 @@ Split by line.</source>
     <message>
         <source>Remove %1?</source>
         <translation>删除 %1 ?</translation>
+    </message>
+</context>
+<context>
+    <name>QGuiApplication</name>
+    <message>
+        <source>QT_LAYOUT_DIRECTION</source>
+        <translation>LTR</translation>
     </message>
 </context>
 <context>
@@ -1374,6 +1421,14 @@ As of January 1, 2022, compatibility with MD5 authentication information will be
     <message>
         <source>Clearing servers...</source>
         <translation>正在清理服务器...</translation>
+    </message>
+    <message>
+        <source>Enable VPN</source>
+        <translation type="obsolete">启用 VPN</translation>
+    </message>
+    <message>
+        <source>Enable System Proxy</source>
+        <translation type="obsolete">启用系统代理</translation>
     </message>
 </context>
 <context>

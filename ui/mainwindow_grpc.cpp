@@ -41,9 +41,13 @@ void MainWindow::setup_grpc() {
 inline bool speedtesting = false;
 
 void MainWindow::speedtest_current_group(int mode) {
+    auto profiles = get_selected_or_group();
+    if (profiles.isEmpty()) return;
+    auto group = NekoRay::profileManager->CurrentGroup();
+    if (group->archive) return;
+
 #ifndef NKR_NO_GRPC
     if (speedtesting) return;
-
     QStringList full_test_flags;
     if (mode == libcore::FullTest) {
         bool ok;
@@ -57,25 +61,14 @@ void MainWindow::speedtest_current_group(int mode) {
         full_test_flags = s.trimmed().split(",");
         if (!ok) return;
     }
-
     speedtesting = true;
 
-    runOnNewThread([=]() {
-        auto group = NekoRay::profileManager->CurrentGroup();
-        if (group->archive) return;
-        auto order = ui->proxyListTable->order; // copy
-
+    runOnNewThread([this, profiles, mode, full_test_flags]() {
         QMutex lock_write;
         QMutex lock_return;
-        QList<QSharedPointer<NekoRay::ProxyEntity>> profiles;
         int threadN = mode == libcore::FullTest ? 1 : NekoRay::dataStore->test_concurrent;
         int threadN_finished = 0;
-
-        // 这个是按照显示的顺序
-        for (auto id: order) {
-            auto profile = NekoRay::profileManager->GetProfile(id);
-            if (profile != nullptr) profiles += profile;
-        }
+        auto profiles_test = profiles; // copy
 
         // Threads
         lock_return.lock();
@@ -84,13 +77,13 @@ void MainWindow::speedtest_current_group(int mode) {
                 forever {
                     //
                     lock_write.lock();
-                    if (profiles.isEmpty()) {
+                    if (profiles_test.isEmpty()) {
                         threadN_finished++;
                         if (threadN == threadN_finished) lock_return.unlock();
                         lock_write.unlock();
                         return;
                     }
-                    auto profile = profiles.takeFirst();
+                    auto profile = profiles_test.takeFirst();
                     lock_write.unlock();
 
                     //
@@ -100,15 +93,15 @@ void MainWindow::speedtest_current_group(int mode) {
                     req.set_url(NekoRay::dataStore->test_url.toStdString());
 
                     //
-                    QList<NekoRay::sys::ExternalProcess *> ext;
+                    std::list<std::pair<NekoRay::fmt::ExternalBuildResult, QSharedPointer<NekoRay::sys::ExternalProcess>>> exts;
 
                     if (mode == libcore::TestMode::UrlTest || mode == libcore::FullTest) {
                         auto c = NekoRay::BuildConfig(profile, true, false);
-                        // external test ???
-                        if (!c->ext.isEmpty()) {
-                            ext = c->ext;
-                            for (auto extC: ext) {
-                                extC->Start();
+                        // TODO refactor external test
+                        if (!c->exts.empty()) {
+                            exts = c->exts;
+                            for (const auto &ext: exts) {
+                                ext.second->Start();
                             }
                             QThread::msleep(500);
                         }
@@ -128,9 +121,8 @@ void MainWindow::speedtest_current_group(int mode) {
 
                     bool rpcOK;
                     auto result = defaultClient->Test(&rpcOK, req);
-                    for (auto extC: ext) {
-                        extC->Kill();
-                        extC->deleteLater();
+                    for (const auto &ext: exts) {
+                        ext.second->Kill();
                     }
                     if (!rpcOK) return;
 
@@ -221,7 +213,6 @@ void MainWindow::neko_start(int _id) {
 #ifndef NKR_NO_GRPC
     libcore::LoadConfigReq req;
     req.set_coreconfig(QJsonObject2QString(result->coreConfig, true).toStdString());
-    req.set_trydomains(result->tryDomains.join(",").toStdString());
     //
     bool rpcOK;
     QString error = defaultClient->Start(&rpcOK, req);
@@ -236,8 +227,9 @@ void MainWindow::neko_start(int _id) {
     NekoRay::traffic::trafficLooper->loop_enabled = true;
 #endif
 
-    for (auto extC: result->ext) {
-        extC->Start();
+    for (const auto &ext: result->exts) {
+        NekoRay::sys::running_ext.push_back(ext.second);
+        ext.second->Start();
     }
 
     NekoRay::dataStore->UpdateStartedId(ent->id);
@@ -254,7 +246,6 @@ void MainWindow::neko_stop(bool crash) {
     while (!NekoRay::sys::running_ext.isEmpty()) {
         auto extC = NekoRay::sys::running_ext.takeFirst();
         extC->Kill();
-        extC->deleteLater();
     }
 
 #ifndef NKR_NO_GRPC
